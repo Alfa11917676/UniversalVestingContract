@@ -2,7 +2,6 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$USER_HOME$/Documents/Iconic/.idea/Iconic.iml" filepath="$USER_HOME$/Documents/Iconic/.idea/Iconic.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/vesting.iml" filepath="$PROJECT_DIR$/.idea/vesting.iml" />
     </modules>
   </component>

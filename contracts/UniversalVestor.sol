@@ -134,15 +134,15 @@ contract UniversalVestingContract is Ownable, Pausable {
 
     function getVestingBalance(address _userAddress) public view returns (uint, uint) {
         if (!Investors[_userAddress].hasInitialClaimed && block.timestamp >= initialVestingAmountWithdrawThresholdTime) return (Investors[_userAddress].initialToBeClaimed,1);
-        else if (!Investors[_userAddress].hasIntermediateClaim && Investors[_userAddress].intermediateToBeClaimed > 0 && block.timestamp <= intermediateVestingTimePeriod[Investors[_userAddress].investorType]+intermediateVestingAmountWithdrawThresholdTime) return (intermediatevesttatus(_userAddress),2);
+        else if (!Investors[_userAddress].hasIntermediateClaim && Investors[_userAddress].intermediateToBeClaimed > 0 && block.timestamp <= intermediateVestingTimePeriod[Investors[_userAddress].investorType]+intermediateVestingAmountWithdrawThresholdTime) return (intermediateVestStatus(_userAddress),2);
         else if (!Investors[_userAddress].hasLinearClaimed && Investors[_userAddress].linearToBeClaimed > 0 && block.timestamp >= linearVestingAmountWithdrawThresholdTime) return (linearVestingDetails(_userAddress),3);
         else return (0,4);
     }
 
-    function intermediatevesttatus(address _userAddress) public view returns (uint) {
+    function intermediateVestStatus(address _userAddress) public view returns (uint) {
         uint lastClaimTime = Investors[_userAddress].lastClaimTime;
         uint timeDifference = block.timestamp - lastClaimTime;
-        timeDifference = timeDifference / 1 days;
+        timeDifference = timeDifference / 60;
         uint intermediateReleaseTimeSpan = intermediateVestingTimePeriod[Investors[_userAddress].investorType];
         uint totalIntermediateFund = Investors[_userAddress].intermediateToBeClaimed;
         uint perDayFund = totalIntermediateFund / intermediateReleaseTimeSpan;
@@ -152,7 +152,7 @@ contract UniversalVestingContract is Ownable, Pausable {
     function linearVestingDetails(address _userAddress) public view returns (uint) {
         uint lastClaimTime = Investors[_userAddress].lastClaimTime;
         uint timeDifference = block.timestamp - lastClaimTime;
-        timeDifference = timeDifference / 1 days;
+        timeDifference = timeDifference / 60;
         uint linearReleaseTimeSpan = linearVestingTimePeriod[Investors[_userAddress].investorType];
         uint totalIntermediateFund = Investors[_userAddress].linearToBeClaimed;
         uint perDayFund = totalIntermediateFund / linearReleaseTimeSpan;
