@@ -174,7 +174,15 @@ contract UniversalVestingContract is Ownable, Pausable {
 
         uint lastClaimTime = Investors[_userAddress].lastClaimTime;
         uint timeDifference;
-        timeDifference= block.timestamp - lastClaimTime;
+        if (block.timestamp <= linearVestingTimePeriod[Investors[_userAddress].investorType]+linearVestingAmountWithdrawThresholdTime)
+        {
+            timeDifference = block.timestamp - lastClaimTime;
+        }
+        else
+        {
+            //@dev to return people the exact amount if the intermediate vesting period is over
+            return(Investors[msg.sender].linearToBeClaimed - Investors[msg.sender].linearClaimed);
+        }
         timeDifference = timeDifference / 1 days;
         uint linearReleaseTimeSpan = linearVestingTimePeriod[Investors[_userAddress].investorType];
         uint totalIntermediateFund = Investors[_userAddress].linearToBeClaimed;
