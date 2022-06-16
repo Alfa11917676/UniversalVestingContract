@@ -83,7 +83,9 @@ contract UniversalVestingContract is Ownable, Pausable {
         (uint amount, uint returnType) = getVestingBalance(msg.sender);
         require(returnType != 4,'Time Period is Not Over');
         if (returnType == 1) {
+            require (amount >0,'Initial Vesting: 0 amount');
             Investors[msg.sender].hasInitialClaimed = true;
+            Investors[msg.sender].initialClaimed += amount;
             token.transfer(msg.sender, amount);
             if (intermediateAmountReleased[Investors[msg.sender].investorType] > 0)
                 Investors[msg.sender].lastClaimTime = intermediateVestingAmountWithdrawThresholdTime[Investors[msg.sender].investorType];
@@ -123,11 +125,33 @@ contract UniversalVestingContract is Ownable, Pausable {
         token = IERC20(_tokenAddress);
     }
     
-    function setThresholdTimeForVesting (uint[] memory initial, uint[] memory intermediate, uint[] memory linear) external onlyOwner {
-        initialVestingAmountWithdrawThresholdTime = initial;
-        intermediateVestingAmountWithdrawThresholdTime = intermediate;
-        linearVestingAmountWithdrawThresholdTime = linear;
-        setPauseStatus(false);
+    function setThresholdTimeForVesting (uint startTime) external onlyOwner {
+        for (uint i=0;i<10;i++)
+            initialVestingAmountWithdrawThresholdTime[i+1] = startTime;
+        for (uint i=0;i<10;i++) {
+            if (i+1 ==8)
+                intermediateVestingAmountWithdrawThresholdTime[i+1] = startTime + 14 days;
+            else
+                intermediateVestingAmountWithdrawThresholdTime[i + 1] = 0;
+        }
+        for (uint i=0;i<10;i++) {
+            if (i+1 == 2 || i+1 == 3 || i+1 == 4)
+                linearVestingAmountWithdrawThresholdTime[i+1] = startTime + 1 days;
+            else if (i+1 == 5)
+                linearVestingAmountWithdrawThresholdTime[i+1] = startTime + 181 days;
+            else if (i+1 == 6)
+                linearVestingAmountWithdrawThresholdTime[i+1] = startTime + 360 days;
+            else if (i+1 == 7)
+                linearVestingAmountWithdrawThresholdTime[i+1] = startTime + 31 days;
+            else if (i+1 == 8)
+                linearVestingAmountWithdrawThresholdTime[i+1] = startTime + 181 days;
+            else if (i+1 == 9)
+                linearVestingAmountWithdrawThresholdTime[i+1] = startTime + 91 days;
+            else if(i+1 == 10)
+                linearVestingAmountWithdrawThresholdTime[i+1] = startTime + 1 days;
+            else
+                linearVestingAmountWithdrawThresholdTime[i+1] = startTime + 61 days;
+        }    setPauseStatus(false);
     }
 
     function setArray (
@@ -175,10 +199,10 @@ contract UniversalVestingContract is Ownable, Pausable {
             //@dev to return people the exact amount if the intermediate vesting period is over
            return(Investors[msg.sender].intermediateToBeClaimed - Investors[msg.sender].intermediateClaimed);
         }
-        timeDifference = timeDifference / 1 days;
+        timeDifference = timeDifference / 60;
         uint intermediateReleaseTimeSpan = intermediateVestingTimePeriod[Investors[_userAddress].investorType];
         uint totalIntermediateFund = Investors[_userAddress].intermediateToBeClaimed;
-        uint perDayFund = totalIntermediateFund / (intermediateReleaseTimeSpan / 1 days);
+        uint perDayFund = totalIntermediateFund / (intermediateReleaseTimeSpan / 60);
         return perDayFund * timeDifference;
     }
 
@@ -195,10 +219,10 @@ contract UniversalVestingContract is Ownable, Pausable {
             //@dev to return people the exact amount if the intermediate vesting period is over
             return(Investors[msg.sender].linearToBeClaimed - Investors[msg.sender].linearClaimed);
         }
-        timeDifference = timeDifference / 1 days;
+        timeDifference = timeDifference / 60;
         uint linearReleaseTimeSpan = linearVestingTimePeriod[Investors[_userAddress].investorType];
         uint totalIntermediateFund = Investors[_userAddress].linearToBeClaimed;
-        uint perDayFund = totalIntermediateFund / (linearReleaseTimeSpan / 1 days);
+        uint perDayFund = totalIntermediateFund / (linearReleaseTimeSpan / 60);
         return perDayFund * timeDifference;
     }
 

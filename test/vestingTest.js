@@ -29,6 +29,7 @@ describe("Testing Vesting", function () {
 
   it("Adding Investors: ", async function () {
        await vesting.addMinter([[alice.address,ethers.utils.parseEther('1000'),1],[bob.address,ethers.utils.parseEther('1000'),2],[deepan.address,ethers.utils.parseEther('2000'),3]])
+
        await vesting.addMinter([[arnab.address,ethers.utils.parseEther('100'),1]])
        await vesting.removeUser([arnab.address])
        await vesting.addMinter([[arnab.address,ethers.utils.parseEther('1000'),1]])
