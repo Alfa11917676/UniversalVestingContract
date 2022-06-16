@@ -126,31 +126,33 @@ contract UniversalVestingContract is Ownable, Pausable {
     }
     
     function setThresholdTimeForVesting (uint startTime) external onlyOwner {
-        for (uint i=0;i<10;i++)
-            initialVestingAmountWithdrawThresholdTime[i+1] = startTime;
-        for (uint i=0;i<10;i++) {
-            if (i+1 ==8)
-                intermediateVestingAmountWithdrawThresholdTime[i+1] = startTime + 14 days;
+        for (uint i=0;i<11;i++)
+            initialVestingAmountWithdrawThresholdTime[i] = startTime;
+        for (uint i=0;i<11;i++) {
+            if (i ==8)
+                intermediateVestingAmountWithdrawThresholdTime[i] = startTime + 14 minutes;
             else
-                intermediateVestingAmountWithdrawThresholdTime[i + 1] = 0;
+                intermediateVestingAmountWithdrawThresholdTime[i] = 0;
         }
-        for (uint i=0;i<10;i++) {
-            if (i+1 == 2 || i+1 == 3 || i+1 == 4)
-                linearVestingAmountWithdrawThresholdTime[i+1] = startTime + 1 days;
-            else if (i+1 == 5)
-                linearVestingAmountWithdrawThresholdTime[i+1] = startTime + 181 days;
-            else if (i+1 == 6)
-                linearVestingAmountWithdrawThresholdTime[i+1] = startTime + 360 days;
-            else if (i+1 == 7)
-                linearVestingAmountWithdrawThresholdTime[i+1] = startTime + 31 days;
-            else if (i+1 == 8)
-                linearVestingAmountWithdrawThresholdTime[i+1] = startTime + 181 days;
-            else if (i+1 == 9)
-                linearVestingAmountWithdrawThresholdTime[i+1] = startTime + 91 days;
-            else if(i+1 == 10)
-                linearVestingAmountWithdrawThresholdTime[i+1] = startTime + 1 days;
+        for (uint i=0;i<11;i++) {
+            if (i == 2 || i == 3 || i == 4)
+                linearVestingAmountWithdrawThresholdTime[i] = startTime + 1 minutes;
+            else if (i == 5)
+                linearVestingAmountWithdrawThresholdTime[i] = startTime + 181 minutes;
+            else if (i == 6)
+                linearVestingAmountWithdrawThresholdTime[i] = startTime + 360 minutes;
+            else if (i == 7)
+                linearVestingAmountWithdrawThresholdTime[i] = startTime + 31 minutes;
+            else if (i == 8)
+                linearVestingAmountWithdrawThresholdTime[i] = startTime + 181 minutes;
+            else if (i == 9)
+                linearVestingAmountWithdrawThresholdTime[i] = startTime + 91 minutes;
+            else if(i == 10)
+                linearVestingAmountWithdrawThresholdTime[i] = startTime + 1 minutes;
+            else if (i == 1)
+                linearVestingAmountWithdrawThresholdTime[i] = startTime + 61 minutes;
             else
-                linearVestingAmountWithdrawThresholdTime[i+1] = startTime + 61 days;
+                linearVestingAmountWithdrawThresholdTime[i] = 0;
         }    setPauseStatus(false);
     }
 
