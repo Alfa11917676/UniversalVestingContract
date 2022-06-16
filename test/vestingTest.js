@@ -24,7 +24,7 @@ describe("Testing Vesting", function () {
       [0,120*24*60*60,70*24*60*60,100*24*60*60])
     const block = await ethers.getDefaultProvider().getBlock('latest')
     initialTime = block.timestamp
-    await vesting.setThresholdTimeForVesting([0,initialTime+24*60*60,initialTime+24*60*60,initialTime+24*60*60],[0,initialTime + 4*24*60*60,initialTime + 4*24*60*60,initialTime + 4*24*60*60],[0,initialTime + 30*24*60*60,initialTime + 30*24*60*60,initialTime + 30*24*60*60])
+    await vesting.setThresholdTimeForVesting(initialTime+ oneDay)
   });
 
   it("Adding Investors: ", async function () {
