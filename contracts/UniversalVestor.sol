@@ -4,7 +4,7 @@ pragma solidity >=0.8.7;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
-import "hardhat/console.sol";
+
 contract UniversalVestingContract is Ownable, Pausable {
 
 
@@ -60,8 +60,11 @@ contract UniversalVestingContract is Ownable, Pausable {
             vesting.initialToBeClaimed = (initialAmountReleased[vest[i].investorType] * vest[i].amount) / 1000;
             vesting.intermediateToBeClaimed = (intermediateAmountReleased[vest[i].investorType] * vest[i].amount)/ 1000;
             vesting.linearToBeClaimed = (linearVestingAmountReleased[vest[i].investorType] * vest[i].amount ) / 1000;
-            if (vesting.intermediateToBeClaimed >= 0) vesting.lastClaimTime = intermediateVestingAmountWithdrawThresholdTime;
-            else if (vesting.intermediateToBeClaimed == 0 && vesting.linearToBeClaimed >=0) vesting.lastClaimTime = linearVestingAmountWithdrawThresholdTime;
+            if (initialAmountReleased[vest[i].investorType] == 0 && intermediateAmountReleased[vest[i].investorType] > 0)
+                vesting.lastClaimTime = intermediateVestingAmountWithdrawThresholdTime;
+            else if (initialAmountReleased[vest[i].investorType] == 0 && intermediateAmountReleased[vest[i].investorType] == 0 )
+                vesting.lastClaimTime = linearVestingAmountWithdrawThresholdTime;
+
             Investors[vest[i].account] = vesting;
             emit InvestorAddress(vest[i].account, vest[i].amount,vest[i].investorType);
         }
@@ -74,10 +77,12 @@ contract UniversalVestingContract is Ownable, Pausable {
         (uint amount, uint returnType) = getVestingBalance(msg.sender);
         require(returnType != 4,'Time Period is Not Over');
         if (returnType == 1) {
-            require (amount >0,'Initial Vesting: 0 amount');
             Investors[msg.sender].hasInitialClaimed = true;
             token.transfer(msg.sender, amount);
-            console.log('Inside if');
+            if (intermediateAmountReleased[Investors[msg.sender].investorType] > 0)
+                Investors[msg.sender].lastClaimTime = intermediateVestingAmountWithdrawThresholdTime;
+            else if (intermediateAmountReleased[Investors[msg.sender].investorType] == 0 )
+                Investors[msg.sender].lastClaimTime = linearVestingAmountWithdrawThresholdTime;
             emit VestingAmountTaken(msg.sender, amount);
         } else if (returnType == 2) {
             require (amount >0,'Intermediate Vesting: 0 amount');
@@ -199,6 +204,12 @@ contract UniversalVestingContract is Ownable, Pausable {
     function blackListUser (address[] memory blackListedAddresses) external onlyOwner {
         for (uint i=0; i< blackListedAddresses.length; i++) {
             isBlackListed[blackListedAddresses[i]] = true;
+        }
+    }
+
+    function whitelistListUser (address[] memory whitelistListedAddresses) external onlyOwner {
+        for (uint i=0; i< whitelistListedAddresses.length; i++) {
+            isBlackListed[whitelistListedAddresses[i]] = false;
         }
     }
 }

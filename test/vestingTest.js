@@ -25,7 +25,6 @@ describe("Testing Vesting", function () {
     const block = await ethers.getDefaultProvider().getBlock('latest')
 
     initialTime = block.timestamp
-    console.log('Timestamp inside before', initialTime)
     await vesting.setThresholdTimeForVesting(initialTime+24*60*60,initialTime + 4*24*60*60,initialTime + 30*24*60*60)
   });
   it("Adding Investors: ", async function () {
@@ -49,7 +48,7 @@ describe("Testing Vesting", function () {
     await vesting.withdraw()
     expect (await token.balanceOf(alice.address)).to.equal(ethers.utils.parseEther('100'))
     await expect (vesting.withdraw()).to.be.revertedWith('Time Period is Not Over');
-    await expect (vesting.connect(deepan).withdraw()).to.be.revertedWith('Initial Vesting: 0 amount');
+    await expect (vesting.connect(deepan).withdraw()).to.be.revertedWith('Time Period is Not Over');
     await vesting.connect(bob).withdraw()
     expect (await token.balanceOf(bob.address)).to.equal(ethers.utils.parseEther('200'))
   })
@@ -72,30 +71,106 @@ describe("Testing Vesting", function () {
     await expect (vesting.connect(alice).withdraw()).to.be.revertedWith('Time Period is Not Over');
   })
 
-  it ('Claiming Linear Vesting', async() =>{
+  it ('Claiming Linear Vesting', async() => {
     time = await network.provider.send("evm_setNextBlockTimestamp", [initialTime+30 * oneDay])
     await network.provider.send("evm_mine")
     vestingDetails = await vesting.Investors(bob.address)
     expect(time).to.equal(vestingDetails[2])
     time = await network.provider.send("evm_setNextBlockTimestamp", [initialTime+31 * oneDay])
     await network.provider.send("evm_mine")
-    let alicePreviousBalance = await token.balanceOf(alice.address)
-    let bobPreviousBalance = await token.balanceOf(bob.address)
-    let deepanPreviousBalance = await token.balanceOf(deepan.address)
-    alicePreviousBalance = (fromWei(alicePreviousBalance.toString(),'ether'))
-    bobPreviousBalance = (fromWei(bobPreviousBalance.toString(),'ether'))
-    deepanPreviousBalance = (fromWei(deepanPreviousBalance.toString(),'ether'))
     await vesting.connect(alice).withdraw();
     await vesting.connect(bob).withdraw();
     await vesting.connect(deepan).withdraw();
     let aliceCurrentBalance = await token.balanceOf(alice.address)
     let bobCurrentBalance = await token.balanceOf(bob.address)
     let deepanCurrentBalance = await token.balanceOf(deepan.address)
-    aliceCurrentBalance = (fromWei(alicePreviousBalance.toString(),'ether'))
-    bobCurrentBalance = (fromWei(bobPreviousBalance.toString(),'ether'))
-    deepanCurrentBalance = (fromWei(deepanPreviousBalance.toString(),'ether'))
-    expect(aliceCurrentBalance).to.equal((parseInt(alicePreviousBalance)+7.5).toString())
-    expect(bobCurrentBalance).to.equal((parseInt(bobPreviousBalance)+10).toString())
-    expect(deepanCurrentBalance).to.equal((parseInt(deepanCurrentBalance)+10).toString())
+    expect(aliceCurrentBalance).to.equal(ethers.utils.parseEther('107.5'))
+    expect(bobCurrentBalance).to.equal(ethers.utils.parseEther('310'))
+    expect(deepanCurrentBalance).to.equal(ethers.utils.parseEther('20'))
+
+    await network.provider.send("evm_setNextBlockTimestamp", [initialTime+50 * oneDay])
+    await network.provider.send("evm_mine")
+    await vesting.connect(alice).withdraw();
+    await vesting.connect(bob).withdraw();
+    await vesting.connect(deepan).withdraw();
+    let aliceCurrentBalance2 = await token.balanceOf(alice.address)
+    let bobCurrentBalance2 = await token.balanceOf(bob.address)
+    let deepanCurrentBalance2 = await token.balanceOf(deepan.address)
+    expect(aliceCurrentBalance2).to.equal(ethers.utils.parseEther('250'))
+    expect(bobCurrentBalance2).to.equal(ethers.utils.parseEther('500'))
+    expect(deepanCurrentBalance2).to.equal(ethers.utils.parseEther('400'))
+
+    await network.provider.send("evm_setNextBlockTimestamp", [initialTime+51 * oneDay])
+    await network.provider.send("evm_mine")
+    await vesting.connect(alice).withdraw();
+    await vesting.connect(bob).withdraw();
+    await vesting.connect(deepan).withdraw();
+    let aliceCurrentBalance3 = await token.balanceOf(alice.address)
+    let bobCurrentBalance3 = await token.balanceOf(bob.address)
+    let deepanCurrentBalance3 = await token.balanceOf(deepan.address)
+    expect(aliceCurrentBalance3).to.equal(ethers.utils.parseEther('257.5'))
+    expect(bobCurrentBalance3).to.equal(ethers.utils.parseEther('510'))
+    expect(deepanCurrentBalance3).to.equal(ethers.utils.parseEther('420'))
+
+    await network.provider.send("evm_setNextBlockTimestamp", [initialTime+100 * oneDay])
+    await network.provider.send("evm_mine")
+    await vesting.connect(alice).withdraw();
+    await vesting.connect(bob).withdraw();
+    await vesting.connect(deepan).withdraw();
+    let aliceCurrentBalance4 = await token.balanceOf(alice.address)
+    let bobCurrentBalance4 = await token.balanceOf(bob.address)
+    let deepanCurrentBalance4 = await token.balanceOf(deepan.address)
+    expect(aliceCurrentBalance4).to.equal(ethers.utils.parseEther('625'))
+    expect(bobCurrentBalance4).to.equal(ethers.utils.parseEther('1000'))
+    expect(deepanCurrentBalance4).to.equal(ethers.utils.parseEther('1400'))
+    vestingDetails = await vesting.Investors(bob.address)
+    expect(vestingDetails[11]).to.equal(true)
+
+    await network.provider.send("evm_setNextBlockTimestamp", [initialTime+130 * oneDay])
+    await network.provider.send("evm_mine")
+    await vesting.connect(alice).withdraw();
+    await expect (vesting.connect(bob).withdraw()).to.be.revertedWith('Vesting: All Amount Claimed');
+    await vesting.connect(deepan).withdraw();
+    let aliceCurrentBalance5 = await token.balanceOf(alice.address)
+    let bobCurrentBalance5 = await token.balanceOf(bob.address)
+    let deepanCurrentBalance5 = await token.balanceOf(deepan.address)
+    expect(aliceCurrentBalance5).to.equal(ethers.utils.parseEther('850'))
+    expect(bobCurrentBalance5).to.equal(ethers.utils.parseEther('1000'))
+    expect(deepanCurrentBalance5).to.equal(ethers.utils.parseEther('2000'))
+    vestingDetails = await vesting.Investors(deepan.address)
+    expect(vestingDetails[11]).to.equal(true)
+
+
+    await network.provider.send("evm_setNextBlockTimestamp", [initialTime+160 * oneDay])
+    await network.provider.send("evm_mine")
+    await vesting.connect(alice).withdraw();
+    await expect (vesting.connect(bob).withdraw()).to.be.revertedWith('Vesting: All Amount Claimed');
+    await expect (vesting.connect(deepan).withdraw()).to.be.revertedWith('Vesting: All Amount Claimed');
+    let aliceCurrentBalance6 = await token.balanceOf(alice.address)
+    let bobCurrentBalance6 = await token.balanceOf(bob.address)
+    let deepanCurrentBalance6 = await token.balanceOf(deepan.address)
+    expect(aliceCurrentBalance6).to.equal(ethers.utils.parseEther('1000'))
+    expect(bobCurrentBalance6).to.equal(ethers.utils.parseEther('1000'))
+    expect(deepanCurrentBalance6).to.equal(ethers.utils.parseEther('2000'))
+    vestingDetails = await vesting.Investors(alice.address)
+    expect(vestingDetails[11]).to.equal(true)
+
+    await network.provider.send("evm_setNextBlockTimestamp", [initialTime+161 * oneDay])
+    await network.provider.send("evm_mine")
+    await expect (vesting.connect(alice).withdraw()).to.be.revertedWith('Vesting: All Amount Claimed');
+    await expect (vesting.connect(bob).withdraw()).to.be.revertedWith('Vesting: All Amount Claimed');
+    await expect (vesting.connect(deepan).withdraw()).to.be.revertedWith('Vesting: All Amount Claimed');
+  })
+
+  it ('Testing BlackList', async function() {
+    await vesting.blackListUser([bhargab.address]);
+    await expect (vesting.addMinter([[bhargab.address,ethers.utils.parseEther('1000'),1]])).to.be.revertedWith('User BlackListed')
+  })
+
+  it ('Testing Whitelist', async function() {
+    await vesting.whitelistListUser([bhargab.address]);
+    await vesting.addMinter([[bhargab.address,ethers.utils.parseEther('1000'),1]])
+    let VestingData = await vesting.Investors(bhargab.address)
+    expect(VestingData[0]).to.equal(1)
   })
 });
