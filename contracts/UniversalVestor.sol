@@ -9,7 +9,7 @@ contract UniversalVestingContract is Ownable, Pausable {
 
 
     IERC20 token;
-
+    uint public globalStartTime;
 
     struct Investor {
         address account;
@@ -34,7 +34,7 @@ contract UniversalVestingContract is Ownable, Pausable {
     }
 
     constructor () {
-        setPauseStatus(true);
+//        setPauseStatus(true);
     }
 
     event InvestorAddress(address account, uint _amout,uint investorType);
@@ -69,15 +69,25 @@ contract UniversalVestingContract is Ownable, Pausable {
         }
     }
 
+
+
+
     function withdraw() external whenNotPaused {
         require (isUserAdded[msg.sender],'User Not Added');
         require (!isBlackListed[msg.sender],'User BlackListed');
         require (!Investors[msg.sender].hasLinearClaimed,'Vesting: All Amount Claimed');
 
+
         if (initialAmountReleased[Investors[msg.sender].investorType] == 0 && intermediateAmountReleased[Investors[msg.sender].investorType] > 0 && Investors[msg.sender].intermediateClaimed == 0)
-            Investors[msg.sender].lastClaimTime = intermediateVestingAmountWithdrawThresholdTime[Investors[msg.sender].investorType];
+                 {
+                     Investors[msg.sender].lastClaimTime = intermediateVestingAmountWithdrawThresholdTime[Investors[msg.sender].investorType];
+                     console.log('Inside if',Investors[msg.sender].lastClaimTime);
+                 }
         else if (initialAmountReleased[Investors[msg.sender].investorType] == 0 && intermediateAmountReleased[Investors[msg.sender].investorType] == 0 && Investors[msg.sender].linearClaimed == 0 )
-            Investors[msg.sender].lastClaimTime = linearVestingAmountWithdrawThresholdTime[Investors[msg.sender].investorType];
+                {
+                    Investors[msg.sender].lastClaimTime = linearVestingAmountWithdrawThresholdTime[Investors[msg.sender].investorType];
+                    console.log('inside else if',Investors[msg.sender].lastClaimTime);
+                }
 
 
         (uint amount, uint returnType) = getVestingBalance(msg.sender);
@@ -126,11 +136,11 @@ contract UniversalVestingContract is Ownable, Pausable {
     }
     
     function setThresholdTimeForVesting (uint startTime) external onlyOwner {
-
+        globalStartTime = startTime;
         initialVestingAmountWithdrawThresholdTime = [0,startTime,startTime,startTime,startTime,startTime,startTime,startTime,startTime,startTime,startTime];
         intermediateVestingAmountWithdrawThresholdTime = [0,0,0,0,0,0,0,0,startTime + 14 minutes,0,0];
-        linearVestingAmountWithdrawThresholdTime = [0,startTime+61 minutes,startTime + 1 minutes,startTime + 1 minutes,startTime + 1 minutes,startTime + 181 minutes,startTime + 360 days,startTime + 31 minutes,startTime + 181 minutes, startTime + 91 minutes,startTime + 1 minutes];
-        setPauseStatus(false);
+        linearVestingAmountWithdrawThresholdTime= [0,startTime+61 minutes,startTime + 1 minutes,startTime + 1 minutes,startTime + 1 minutes,startTime + 181 minutes,startTime + 31 minutes,startTime + 31 minutes,startTime + 181 minutes, startTime + 91 minutes,startTime + 1 minutes];
+//        setPauseStatus(false);
     }
 
     function setArray (
@@ -151,9 +161,7 @@ contract UniversalVestingContract is Ownable, Pausable {
             linearVestingTimePeriod = linearVestingTimePeriodPerInvestor;
     }
 
-
     //@dev Get Details About Vesting Time Period
-
     function getVestingBalance(address _userAddress) public view returns (uint, uint) {
         if (!Investors[_userAddress].hasInitialClaimed &&
             block.timestamp >= initialVestingAmountWithdrawThresholdTime[Investors[msg.sender].investorType] &&
@@ -161,47 +169,54 @@ contract UniversalVestingContract is Ownable, Pausable {
         else if (
             !Investors[_userAddress].hasIntermediateClaim &&
             Investors[_userAddress].intermediateToBeClaimed > 0 &&
-            block.timestamp >= intermediateVestingAmountWithdrawThresholdTime[Investors[msg.sender].investorType]) return (intermediateVestStatus(_userAddress),2);
+            block.timestamp >= intermediateVestingAmountWithdrawThresholdTime[Investors[msg.sender].investorType]) {
+            (uint balance,uint _bal) = intermediateVestStatus(_userAddress);
+            console.log('Balance',balance);
+            return (balance,_bal);
+        }
         else if (!Investors[_userAddress].hasLinearClaimed && Investors[_userAddress].linearToBeClaimed > 0 && block.timestamp >= linearVestingAmountWithdrawThresholdTime[Investors[msg.sender].investorType]) return (linearVestingDetails(_userAddress),3);
         else return (0,4);
     }
-//
-    function intermediateVestStatus(address _userAddress) public view returns (uint) {
+
+    function intermediateVestStatus(address _userAddress) public view returns (uint,uint) {
         uint lastClaimTime = Investors[_userAddress].lastClaimTime;
         uint timeDifference;
-        if (block.timestamp <= intermediateVestingTimePeriod[Investors[_userAddress].investorType]+intermediateVestingAmountWithdrawThresholdTime[Investors[msg.sender].investorType])
+        uint[11] memory intermediateArray = [0,0,0,0,0,0,0,0,globalStartTime + 14 minutes,0,0];
+        if (block.timestamp <= intermediateVestingTimePeriod[Investors[_userAddress].investorType]+intermediateArray[Investors[_userAddress].investorType])
         {
             timeDifference = block.timestamp - lastClaimTime;
         }
         else
         {
             //@dev to return people the exact amount if the intermediate vesting period is over
-           return(Investors[msg.sender].intermediateToBeClaimed - Investors[msg.sender].intermediateClaimed);
+           return(Investors[_userAddress].intermediateToBeClaimed - Investors[_userAddress].intermediateClaimed,2);
         }
-        timeDifference = timeDifference / 60;
+        timeDifference = timeDifference / 1 minutes;
         uint intermediateReleaseTimeSpan = intermediateVestingTimePeriod[Investors[_userAddress].investorType];
         uint totalIntermediateFund = Investors[_userAddress].intermediateToBeClaimed;
-        uint perDayFund = totalIntermediateFund / (intermediateReleaseTimeSpan / 60);
-        return perDayFund * timeDifference;
+        uint perDayFund = totalIntermediateFund / (intermediateReleaseTimeSpan / 1 minutes);
+        uint price = perDayFund * timeDifference;
+        return (price,2);
     }
 
     function linearVestingDetails(address _userAddress) public view returns (uint) {
 
         uint lastClaimTime = Investors[_userAddress].lastClaimTime;
         uint timeDifference;
-        if (block.timestamp <= linearVestingTimePeriod[Investors[_userAddress].investorType]+linearVestingAmountWithdrawThresholdTime[Investors[msg.sender].investorType])
+        uint[11] memory linearTime = [0,globalStartTime+61 minutes,globalStartTime + 1 minutes,globalStartTime + 1 minutes,globalStartTime + 1 minutes,globalStartTime + 181 minutes,globalStartTime + 31 minutes,globalStartTime + 31 minutes,globalStartTime + 181 minutes, globalStartTime + 91 minutes,globalStartTime + 1 minutes];
+        if (block.timestamp <= linearVestingTimePeriod[Investors[_userAddress].investorType]+linearTime[Investors[_userAddress].investorType])
         {
               timeDifference = block.timestamp - lastClaimTime;
         }
         else
         {
             //@dev to return people the exact amount if the intermediate vesting period is over
-            return(Investors[msg.sender].linearToBeClaimed - Investors[msg.sender].linearClaimed);
+            return(Investors[_userAddress].linearToBeClaimed - Investors[_userAddress].linearClaimed);
         }
-        timeDifference = timeDifference / 60;
+        timeDifference = timeDifference / 1 minutes;
         uint linearReleaseTimeSpan = linearVestingTimePeriod[Investors[_userAddress].investorType];
         uint totalIntermediateFund = Investors[_userAddress].linearToBeClaimed;
-        uint perDayFund = totalIntermediateFund / (linearReleaseTimeSpan / 60);
+        uint perDayFund = totalIntermediateFund / (linearReleaseTimeSpan / 1 minutes);
         return perDayFund * timeDifference;
     }
 
@@ -225,11 +240,14 @@ contract UniversalVestingContract is Ownable, Pausable {
 
     function removeUser (address[] memory usersToRemove) external onlyOwner {
         for (uint i=0; i< usersToRemove.length; i++) {
-            require ( initialVestingAmountWithdrawThresholdTime[Investors[msg.sender].investorType] > block.timestamp &&
-                 intermediateVestingAmountWithdrawThresholdTime[Investors[msg.sender].investorType] > block.timestamp &&
-                 linearVestingAmountWithdrawThresholdTime[Investors[msg.sender].investorType] > block.timestamp, 'Any Vesting Has Started');
-                isUserAdded[usersToRemove[i]] = false;
-                delete Investors[usersToRemove[i]];
+             if (initialVestingAmountWithdrawThresholdTime[Investors[msg.sender].investorType] > 0)
+                require (initialVestingAmountWithdrawThresholdTime[Investors[msg.sender].investorType] > block.timestamp,'Initial Vesting Has Started');
+            if (intermediateVestingAmountWithdrawThresholdTime[Investors[msg.sender].investorType] > 0)
+                require (intermediateVestingAmountWithdrawThresholdTime[Investors[msg.sender].investorType] > block.timestamp, 'Intermediate Vesting Has Started');
+            if (linearVestingAmountWithdrawThresholdTime[Investors[msg.sender].investorType] > 0)
+                require (linearVestingAmountWithdrawThresholdTime[Investors[msg.sender].investorType] > block.timestamp, 'Linear Vesting Has Started');
+            isUserAdded[usersToRemove[i]] = false;
+            delete Investors[usersToRemove[i]];
         }
     }
 

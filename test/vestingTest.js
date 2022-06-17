@@ -5,7 +5,7 @@ const {fromWei} = Web3.utils
 
 describe("Testing Vesting", function () {
   let alice, bob, deepan, bhargab, arnab, token, vesting, initialTime;
-  let oneDay = 86400
+  let oneDay = 60
   before('Setting Up The Suite', async() => {
     [alice,bob,deepan,bhargab,arnab] = await ethers.getSigners()
     Dummy = await ethers.getContractFactory('MyToken')
@@ -17,19 +17,18 @@ describe("Testing Vesting", function () {
     await vesting.setRewardTokenAddress(token.address)
     await token.mint(vesting.address, ethers.utils.parseEther('100000'))
     await vesting.setArray(
-      [0,100,200,0],
-      [0,0,100,0],
-      [0,900,700,1000],
-      [0,0,10*24*60*60,0],
-      [0,120*24*60*60,70*24*60*60,100*24*60*60])
+      [0,0,50,100,200,0,0,0,0,30,200],
+      [0,0,0,0,0,0,0,0,60,0,0],
+      [0,1000,950,900,800,1000,1000,1000,940,970,800],
+      [0,0,0,0,0,0,0,0,30*60*60*24,0,0],
+      [0,39600,32400,21900,10800,54000,65700,63000,43800,81000,28800])
     const block = await ethers.getDefaultProvider().getBlock('latest')
     initialTime = block.timestamp
-    await vesting.setThresholdTimeForVesting(initialTime+ oneDay)
+    await vesting.setThresholdTimeForVesting(initialTime+2* oneDay)
   });
 
   it("Adding Investors: ", async function () {
-       await vesting.addMinter([[alice.address,ethers.utils.parseEther('1000'),1],[bob.address,ethers.utils.parseEther('1000'),2],[deepan.address,ethers.utils.parseEther('2000'),3]])
-
+       await vesting.addMinter([[alice.address,ethers.utils.parseEther('1000'),1],[bob.address,ethers.utils.parseEther('1000'),8],[deepan.address,ethers.utils.parseEther('2000'),3]])
        await vesting.addMinter([[arnab.address,ethers.utils.parseEther('100'),1]])
        await vesting.removeUser([arnab.address])
        await vesting.addMinter([[arnab.address,ethers.utils.parseEther('1000'),1]])
@@ -38,43 +37,47 @@ describe("Testing Vesting", function () {
        const deepanDetails = await vesting.Investors(deepan.address)
        const arnabDetails = await vesting.Investors(arnab.address)
        expect(arnabDetails[1]).to.equal(ethers.utils.parseEther('1000'))
-       expect(aliceDetails[3]).to.equal(ethers.utils.parseEther('100'));
-       expect(aliceDetails[5]).to.equal(ethers.utils.parseEther('900'));
-       expect(deepanDetails[3]).to.equal(ethers.utils.parseEther('0'));
-       expect(deepanDetails[5]).to.equal(ethers.utils.parseEther('2000'));
-       expect(bobDetails[3]).to.equal(ethers.utils.parseEther('200'));
-       expect(bobDetails[5]).to.equal(ethers.utils.parseEther('700'));
-       expect(bobDetails[4]).to.equal(ethers.utils.parseEther('100'));
+       expect(aliceDetails[3]).to.equal(ethers.utils.parseEther('0'));
+       expect(aliceDetails[5]).to.equal(ethers.utils.parseEther('1000'));
+       expect(deepanDetails[3]).to.equal(ethers.utils.parseEther('200'));
+       expect(deepanDetails[5]).to.equal(ethers.utils.parseEther('1800'));
+       expect(bobDetails[3]).to.equal(ethers.utils.parseEther('0'));
+       expect(bobDetails[5]).to.equal(ethers.utils.parseEther('940'));
+       expect(bobDetails[4]).to.equal(ethers.utils.parseEther('60'));
   });
 
   it ("Claiming Initial Amount ", async() => {
     await expect (vesting.withdraw()).to.be.revertedWith('Time Period is Not Over');
-    await network.provider.send("evm_setNextBlockTimestamp", [initialTime+86400])
+    await network.provider.send("evm_setNextBlockTimestamp", [initialTime+3 * oneDay])
     await network.provider.send("evm_mine")
-    await vesting.withdraw()
-    expect (await token.balanceOf(alice.address)).to.equal(ethers.utils.parseEther('100'))
-    await expect (vesting.withdraw()).to.be.revertedWith('Time Period is Not Over');
-    await expect (vesting.connect(deepan).withdraw()).to.be.revertedWith('Time Period is Not Over');
-    await vesting.connect(bob).withdraw()
-    expect (await token.balanceOf(bob.address)).to.equal(ethers.utils.parseEther('200'))
+    await vesting.connect(deepan).withdraw()
+    expect (await token.balanceOf(deepan.address)).to.equal(ethers.utils.parseEther('200'))
+    // await expect (vesting.connect(deepan).withdraw()).to.be.revertedWith('Time Period is Not Over');
+    // console.log('here')
+    await expect (vesting.connect(alice).withdraw()).to.be.revertedWith('Time Period is Not Over');
+    await expect(vesting.connect(bob).withdraw())
+    expect (await token.balanceOf(bob.address)).to.equal(ethers.utils.parseEther('0'))
   })
 
   it ("Claiming Intermediate Amount ", async() =>{
-    await network.provider.send("evm_setNextBlockTimestamp", [initialTime+10 * oneDay])
+    await network.provider.send("evm_setNextBlockTimestamp", [initialTime+18* oneDay])
     await network.provider.send("evm_mine")
-    await vesting.connect(bob).withdraw()
-    BobBal = await token.balanceOf(bob.address)
-    expect(fromWei(BobBal.toString(),'ether')).to.equal('260')
-    await network.provider.send("evm_setNextBlockTimestamp", [initialTime+14 * oneDay])
-    await network.provider.send("evm_mine")
-    await vesting.connect(bob).withdraw()
-    BobBalance = await token.balanceOf(bob.address)
-    expect (fromWei(BobBalance.toString(),'ether')).to.equal('300')
-    vestingDetails = await vesting.Investors(bob.address)
-    expect(vestingDetails[10]).to.equal(true)
-    expect(fromWei(vestingDetails[7].toString(),'ether')).to.equal('100');
-    await expect (vesting.connect(bob).withdraw()).to.be.revertedWith('Time Period is Not Over');
-    await expect (vesting.connect(alice).withdraw()).to.be.revertedWith('Time Period is Not Over');
+    console.log('Time',await vesting.intermediateVestingAmountWithdrawThresholdTime([8]))
+    console.log('FROM TEST SUITE',await vesting.getVestingBalance(bob.address))
+    // await vesting.connect(bob).withdraw()
+    // BobBal = await token.balanceOf(bob.address)
+    // expect(fromWei(BobBal.toString(),'ether')).to.equal('60')
+    // console.log('done')
+    // await network.provider.send("evm_setNextBlockTimestamp", [initialTime+26 * oneDay])
+    // await network.provider.send("evm_mine")
+    // await vesting.connect(bob).withdraw()
+    // BobBalance = await token.balanceOf(bob.address)
+    // expect (fromWei(BobBalance.toString(),'ether')).to.equal('300')
+    // vestingDetails = await vesting.Investors(bob.address)
+    // expect(vestingDetails[10]).to.equal(true)
+    // expect(fromWei(vestingDetails[7].toString(),'ether')).to.equal('100');
+    // await expect (vesting.connect(bob).withdraw()).to.be.revertedWith('Time Period is Not Over');
+    // await expect (vesting.connect(alice).withdraw()).to.be.revertedWith('Time Period is Not Over');
   })
 
   it ('Claiming Linear Vesting', async() => {
